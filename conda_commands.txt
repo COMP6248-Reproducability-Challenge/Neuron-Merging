@@ -1,0 +1,35 @@
+# create new environment and install dependencies from file
+conda env create -f ./environment.yml
+
+# update an environment (if install during first command fails, you need to use this after)
+conda env update -f envornment.yml -n neuron_merging
+
+# start using the environment
+conda activate neuron_merging
+
+# stop using the environment
+conda deactivate
+
+# list environments
+conda info --envs
+
+# remove an environment
+conda remove --name neuron_merging --all
+
+# search available package versions on conda
+conda search package_name (e.g. conda search freetype)
+
+# ResolvePackageNotFound error
+put the listed packages under pip in environment.yml
+e.g.
+ResolvePackageNotFound:
+- numpy==1.18.1=py38h4f9e942_0
+in environment.yml under dependencies
+- pip:
+  - numpy==1.18.1=py38h4f9e942_0
+then remove it from the dependencies (so there are no duplicates)
+
+# sources
+https://towardsdatascience.com/getting-started-with-python-environments-using-conda-32e9f2779307
+https://medium.com/swlh/setting-up-a-conda-environment-in-less-than-5-minutes-e64d8fc338e4
+

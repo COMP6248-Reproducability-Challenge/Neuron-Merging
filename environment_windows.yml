@@ -1,0 +1,50 @@
+name: neuron_merging 
+channels:
+  - pytorch
+  - defaults
+dependencies:
+    - python=3.8.3 # remove =hcff3b4d_0 on Windows
+    - _libgcc_mutex=0.1=main
+    - blas=1.0=mkl
+    - ca-certificates=2020.1.1=0
+    - certifi=2020.4.5.1=py38_0
+    - joblib=0.15.1=py_0
+    - olefile=0.46=py_0
+    - pip=20.0.2=py38_3
+    - setuptools=47.1.1=py38_0
+    - six=1.15.0=py_0
+    - torchvision=0.6.0=py38_cu101
+    - wheel=0.34.2=py38_0
+    - freetype=2.9.1 # remove =h8a8886c_1 on Windows
+    - mkl=2020.1 # remove =217 on Windows
+    - mkl_fft=1.0.15
+    - pillow=7.1.2
+    - mkl-service=2.3.0
+    - zlib=1.2.11
+    - scikit-learn=0.22.1
+    - ninja=1.9.0
+    - cudatoolkit=10.1.243
+    - jpeg=9b
+    - sqlite=3.31.1
+    - zstd=1.4.4
+    - intel-openmp=2020.1
+    - openssl=1.1.1g
+    - tk=8.6.8
+    - numpy=1.18.1
+    - scipy=1.4.1
+    - numpy-base=1.18.1
+    - libtiff=4.1.0
+    - mkl_random=1.1.1
+    - pytorch=1.5.0
+    - lz4-c=1.9.2
+    - xz=5.2.5
+    - libpng=1.6.37
+    - libffi=3.2.1 # -v 3.3 for Linux
+    - m2-ncurses=6.0.20160220
+    - m2-libedit=3.1
+    #- pip:
+        # - ld_impl_linux-64=2.33.1
+        # - libgfortran-ng=7.3.0
+        # - readline=8.0
+        # - libgcc-ng=9.1.0
+        #- libstdcxx-ng=9.1.0
