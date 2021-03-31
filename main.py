@@ -346,7 +346,10 @@ if __name__=='__main__':
     best_acc = 0.0
     best_epoch = 0
     if args.pretrained:
-        pretrained_model = torch.load(args.pretrained)
+        if args.cuda:
+            pretrained_model = torch.load(args.pretrained)
+        else:
+            pretrained_model = torch.load(args.pretrained, map_location=torch.device('cpu'))
         best_epoch = 0
         if args.model_type == 'original':
             best_acc = pretrained_model['acc']

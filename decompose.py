@@ -183,7 +183,10 @@ class Decompose:
         if len(value.size()) :
 
             weight_vec = value.view(value.size()[0], -1)
-            weight_vec = weight_vec.cuda()
+            if(self.cuda):
+                weight_vec = weight_vec.cuda()
+            else:
+                weight_vec = weight_vec
 
             # l1-norm
             if self.criterion == 'l1-norm':
