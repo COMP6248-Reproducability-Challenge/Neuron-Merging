@@ -323,7 +323,7 @@ if __name__=='__main__':
                 for i in range(len(cfg)):
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
                 temp_cfg = cfg
-            pass
+            if 
 
 
     # generate the model
@@ -335,6 +335,16 @@ if __name__=='__main__':
         model = models.ResNet(int(args.depth_wide) ,num_classes,cfg=cfg)
     elif args.arch == 'WideResNet':
         model = models.WideResNet(args.depth_wide[0], num_classes, widen_factor=args.depth_wide[1], cfg=cfg)
+    elif args.arch == 'Inception':
+        model = models.Inception(num_classes, cfg=cfg)
+    elif args.arch == 'GoogLeNet':
+        model = models.GoogLeNet(num_classes, cfg=cfg)
+    elif args.arch == 'Alexnet':
+        model = models.Alexnet(num_classes, cfg=cfg)
+    elif args.arch == 'Squeezenet':
+        model = models.Squeezenet(num_classes, cfg=cfg)
+    elif args.arch == 'DenseNet':
+        model = models.DenseNet(num_classes, cfg=cfg)
     else:
         pass
 
