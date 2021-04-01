@@ -214,7 +214,7 @@ if __name__=='__main__':
     if not (args.target in [None, 'conv', 'ip']):
         print('ERROR: Please choose the correct decompose target')
         exit()
-    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet']):
+    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet', 'SqueezeNet']):
         print('ERROR: specified arch is not suppported')
         exit()
     
@@ -344,9 +344,7 @@ if __name__=='__main__':
     elif args.arch == 'Alexnet':
         model = models.Alexnet(num_classes, cfg=cfg)
     elif args.arch == 'Squeezenet':
-        model = models.Squeezenet(num_classes, cfg=cfg)
-    elif args.arch == 'DenseNet':
-        model = models.DenseNet(num_classes, cfg=cfg)
+        model = models.Squeezenet(class_num, cfg=cfg)
     else:
         pass
 
@@ -372,7 +370,7 @@ if __name__=='__main__':
         if args.arch in ['VGG','LeNet_300_100','ResNet','WideResNet']:
             decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
-        elif args.arch in 'Alexnet':
+        elif args.arch in ['Alexnet','SqueezeNet']:
             decomposed_list = Decompose(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
 

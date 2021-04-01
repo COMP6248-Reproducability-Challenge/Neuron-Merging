@@ -4,4 +4,3 @@ from .ResNet    		import *
 from .WideResNet		import *
 from .Alexnet   		import *
 from .Squeezenet		import *
-from .DenseNet  		import *
