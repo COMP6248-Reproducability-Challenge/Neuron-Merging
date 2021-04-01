@@ -214,7 +214,7 @@ if __name__=='__main__':
     if not (args.target in [None, 'conv', 'ip']):
         print('ERROR: Please choose the correct decompose target')
         exit()
-    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100']):
+    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet']):
         print('ERROR: specified arch is not suppported')
         exit()
     
@@ -316,6 +316,7 @@ if __name__=='__main__':
                 for i in range(len(cfg)):
                     cfg[i] = int(cfg[i] * (1 - args.pruning_ratio))
                     temp_cfg[i] = cfg[i] * args.depth_wide[1]
+                    
         
         elif args.target == 'ip' :
             if args.arch == 'LeNet_300_100':
@@ -323,7 +324,12 @@ if __name__=='__main__':
                 for i in range(len(cfg)):
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
                 temp_cfg = cfg
-            if 
+                
+            elif args.arch == 'Alexnet':
+                cfg = [4096, 4096]
+                for i in range(len(cfg)):
+                    cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
+                temp_cfg = cfg
 
 
     # generate the model
@@ -351,7 +357,7 @@ if __name__=='__main__':
     if args.cuda:
         model.cuda()
 
-
+    import models.Alexnet
     # pretrain
     best_acc = 0.0
     best_epoch = 0
@@ -368,8 +374,12 @@ if __name__=='__main__':
 
     # weight initialization
     if args.retrain:
-        decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
-        model = weight_init(model, decomposed_list, args.target)
+        if args.arch in ['VGG','LeNet_300_100','ResNet','WideResNet']:
+            decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+            model = weight_init(model, decomposed_list, args.target)
+        elif args.arch in 'Alexnet':
+            decomposed_list = Decompose(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+            model = weight_init(model, decomposed_list, args.target)
 
 
     # print the number of model parameters

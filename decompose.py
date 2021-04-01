@@ -536,6 +536,48 @@ class Decompose:
                     pass
                 
             elif self.arch == 'Alexnet':
+                if layer in ['classifier.1.weight','classifier.4.weight']:
+                    # Merge scale matrix
+                    if z != None:
+                        original = torch.mm(original,z)
+                    layer_id += 1
+                    
+                    # concatenate weight and bias
+                    if layer in 'classifier.1.weight' :
+                        weight = self.param_dict['classifier.1.weight'].cpu().detach().numpy()
+                        bias = self.param_dict['classifier.1.bias'].cpu().detach().numpy()
+
+                    elif layer in 'classifier.4.weight' :
+                        weight = self.param_dict['classifier.4.weight'].cpu().detach().numpy()
+                        bias = self.param_dict['classifier.4.bias'].cpu().detach().numpy()
+                        
+                    bias_reshaped = bias.reshape(bias.shape[0],-1)
+                    concat_weight = np.concatenate([weight, bias_reshaped], axis = 1)
+
+                    # get index
+                    self.output_channel_index[index] = self.get_output_channel_index(torch.from_numpy(concat_weight), layer_id)
+
+                    # make scale matrix with bias
+                    x = create_scaling_mat_ip_thres_bias(concat_weight, np.array(self.output_channel_index[index]), self.threshold, self.model_type)
+                    z = torch.from_numpy(x).type(dtype=torch.float)
+                    
+                    if self.cuda:
+                        z = z.cuda()
+                    # pruned
+                    pruned = original[self.output_channel_index[index],:]
+                    # update next input channel
+                    input_channel_index = self.output_channel_index[index]
+                    # update decompose weight
+                    self.decompose_weight[index] = pruned
+                    
+                elif layer in 'classifier.6.weight':
+                    original = torch.mm(original,z)
+                    # update decompose weight
+                    self.decompose_weight[index] = original
+
+                # update bias
+                elif layer in ['classifier.1.bias','classifier.4.bias']:
+                    self.decompose_weight[index] = original[input_channel_index]
                     
 
     def main(self):

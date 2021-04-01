@@ -1,13 +1,14 @@
 import torch
 import torch.nn as nn
-from typing import Any
 
 class Alexnet(nn.Module):
 
-    def __init__(self, num_classes = 1000) -> None:
-        super(AlexNet, self).__init__()
+    def __init__(self, num_classes, cfg):
+        if cfg == None:
+            cfg = [4096, 4096]
+        super(Alexnet, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
             nn.Conv2d(64, 192, kernel_size=5, padding=2),
@@ -24,12 +25,12 @@ class Alexnet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(256 * 6 * 6, 4096),
+            nn.Linear(256 * 6 * 6, cfg[0]),
             nn.ReLU(inplace=True),
             nn.Dropout(),
-            nn.Linear(4096, 4096),
+            nn.Linear(cfg[0], cfg[1]),
             nn.ReLU(inplace=True),
-            nn.Linear(4096, num_classes),
+            nn.Linear(cfg[1], num_classes),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
