@@ -18,26 +18,6 @@ import random
 cwd = os.getcwd()
 sys.path.append(cwd+'/../')
 
-# # #NMF library
-# from torchnmf.nmf import NMF
-
-# def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
-#     '''
-#     weight - 2D matrix (n_{i+1}, n_i), np.ndarray
-#     ind - chosen indices to remain, np.ndarray
-#     threshold - cosine similarity threshold
-#     '''
-#     assert(type(weight) == np.ndarray)
-#     assert(type(ind) == np.ndarray)
-#     print(weight.shape)
-#     print(ind.shape)
-#     weight_t = torch.from_numpy(weight)
-#     ind_t = torch.from_numpy(ind)
-#     model = NMF(weight_t.t().shape, rank=60)
-#     model.fit(weight_t.t())
-#     print(model.W.shape)
-#     return model.W
-
 def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
     '''
     weight - 2D matrix (n_{i+1}, n_i), np.ndarray
