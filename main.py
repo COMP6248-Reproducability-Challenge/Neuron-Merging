@@ -291,7 +291,7 @@ if __name__=='__main__':
 
         kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
         train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, **kwargs)
-        test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+        test_loader = torch.utils.data.DataLoader(val_data, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
         num_classes = 1000
 
