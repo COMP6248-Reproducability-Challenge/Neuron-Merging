@@ -283,6 +283,17 @@ if __name__=='__main__':
         test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
         num_classes = 10
+        
+    elif args.dataset == 'ImageNet':
+        transform = transforms.Compose([transforms.ToTensor()])
+        val_data = datasets.ImageFolder(root='/data/ILSVRC2012/val', transform=transform)
+        train_data = datasets.ImageFolder(root='/data/ILSVRC2012/train', transform=transform)
+
+        kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+        train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, **kwargs)
+        test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+
+        num_classes = 1000
 
     else : 
         pass
