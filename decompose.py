@@ -232,6 +232,8 @@ class Decompose:
         for index, layer in enumerate(self.param_dict):
 
             original = self.param_dict[layer]
+            if self.cuda:
+                original = original.cuda()
 
             # VGG
             if self.arch == 'VGG':
@@ -517,6 +519,9 @@ class Decompose:
                 
             elif self.arch == 'Alexnet':
                 if layer in ['classifier.1.weight','classifier.4.weight']:
+                    
+                    if self.cuda:
+                        z = z.cuda()
                     # Merge scale matrix
                     if z != None:
                         original = torch.mm(original,z)
@@ -551,6 +556,8 @@ class Decompose:
                     self.decompose_weight[index] = pruned
                     
                 elif layer in 'classifier.6.weight':
+                    if self.cuda:
+                        z = z.cuda()
                     original = torch.mm(original,z)
                     # update decompose weight
                     self.decompose_weight[index] = original
