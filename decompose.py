@@ -520,10 +520,10 @@ class Decompose:
             elif self.arch == 'Alexnet':
                 if layer in ['classifier.1.weight','classifier.4.weight']:
                     
-                    if self.cuda:
-                        z = z.cuda()
                     # Merge scale matrix
                     if z != None:
+                        if self.cuda:
+                            z = z.cuda()
                         original = torch.mm(original,z)
                     layer_id += 1
                     
