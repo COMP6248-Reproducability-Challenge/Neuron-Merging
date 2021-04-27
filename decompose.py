@@ -18,6 +18,57 @@ import random
 cwd = os.getcwd()
 sys.path.append(cwd+'/../')
 
+# Reprod
+def alg1(weight, ind, threshold, model_type):
+    '''
+    weight - 2D matrix (n_{i+1}, n_i), torch.Tensor
+    ind - chosen indices to remain, list
+    threshold - cosine similarity threshold
+    '''
+    # Y_i == weight_chosen
+    # Z_i == scaling_mat
+
+    Y_i = weight[ind, :]
+    Z_i = torch.zeros(weight.shape[0], Y_i.shape[0])
+    for i in range(weight.shape[0]):
+        if i in ind: # selected neuron
+            p = ind.index(i)
+            Z_i[i, p] = 1
+        else: # pruned neuron
+            if model_type == 'prune':
+                continue
+
+            w_n = weight[i, :]
+            w_star_n, p_star, sim, scale = alg2(w_n, Y_i)
+            if sim >= threshold:
+                Z_i[i, p_star] = scale
+
+    return Y_i, Z_i
+
+def alg2(w_n, Y_i):
+    '''
+    w_n - weight vector (n_i), torch.Tensor
+    Y_i - selected neurons (p_{i+1}, n_i), torch.Tensor
+    '''
+
+    cosine_sim = []
+    cos = nn.CosineSimilarity(dim=0, eps=1e-8)
+    for i in range(Y_i.shape[0]):
+        cosine_sim.append(cos(Y_i[i,:], w_n))
+    sim = max(cosine_sim)
+    max_ind = cosine_sim.index(sim)
+    w_star_n = Y_i[max_ind, :]
+    w_n_norm = torch.norm(w_n, p='fro')
+    w_star_n_norm = torch.norm(w_star_n, p='fro')
+    scale = w_n_norm / w_star_n_norm
+    return w_star_n, max_ind, sim, scale
+
+def alg3():
+    return True
+
+
+
+
 def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
     '''
     weight - 2D matrix (n_{i+1}, n_i), np.ndarray
@@ -548,6 +599,8 @@ class Decompose:
                     # Reprod
                     # make scale matrix with bias
                     z_tensor = create_scaling_mat_ip_thres_bias_tensor(concat_weight_tensor, self.output_channel_index_tensor[index], self.threshold, self.model_type)
+
+                    _, z = alg1(concat_weight_tensor, self.output_channel_index_tensor[index], self.threshold, self.model_type)
 
                     if self.cuda:
                         z = z.cuda()
