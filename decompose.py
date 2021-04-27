@@ -39,6 +39,7 @@ def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
         else: # not chosen
             if model_type == 'prune':
                 continue
+
             max_cos_value = np.max(cosine_sim[i][ind])
             max_cos_value_index = np.argpartition(cosine_sim[i][ind], -1)[-1]
 
@@ -49,6 +50,46 @@ def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
             current_weight = weight[i]
             baseline_norm = np.linalg.norm(baseline_weight)
             current_norm = np.linalg.norm(current_weight)
+            scaling_factor = current_norm / baseline_norm
+            scaling_mat[i, max_cos_value_index] = scaling_factor
+
+    return scaling_mat
+
+# Reprod
+def create_scaling_mat_ip_thres_bias_tensor(weight, ind, threshold, model_type):
+    '''
+    weight - 2D matrix (n_{i+1}, n_i), torch.Tensor
+    ind - chosen indices to remain, list
+    threshold - cosine similarity threshold
+    '''
+    assert(type(weight) == torch.Tensor)
+    assert(type(ind) == list)
+
+    # Reprod
+    # PyTorch currently doesn't support calculating the pairwise distance for a matrix, only between two vectors
+    cosine_sim = 1-pairwise_distances(weight.cpu().numpy(), metric="cosine")
+    cosine_sim = torch.from_numpy(cosine_sim)
+
+    weight_chosen = weight[ind, :]
+    scaling_mat = torch.zeros(weight.shape[0], weight_chosen.shape[0])
+
+    for i in range(weight.shape[0]):
+        if i in ind: # chosen
+            ind_i = ind.index(i)
+            scaling_mat[i, ind_i] = 1
+        else: # not chosen
+            if model_type == 'prune':
+                continue
+
+            max_cos_value, max_cos_value_index = torch.max(cosine_sim[i][ind], dim=0)
+
+            if threshold and max_cos_value < threshold:
+                continue
+
+            baseline_weight = weight_chosen[max_cos_value_index]
+            current_weight = weight[i]
+            baseline_norm = torch.norm(baseline_weight, p='fro')
+            current_norm = torch.norm(current_weight, p='fro')
             scaling_factor = current_norm / baseline_norm
             scaling_mat[i, max_cos_value_index] = scaling_factor
 
@@ -175,6 +216,9 @@ class Decompose:
         self.cuda = cuda
         self.output_channel_index = {}
         self.decompose_weight = []
+
+        # Reprod
+        self.output_channel_index_tensor = {}
 
     def get_output_channel_index(self, value, layer_id):
 
@@ -470,21 +514,41 @@ class Decompose:
                         weight = self.param_dict['ip1.weight'].cpu().detach().numpy()
                         bias = self.param_dict['ip1.bias'].cpu().detach().numpy()
 
+                        # Reprod
+                        weight_tensor = self.param_dict['ip1.weight'].detach()
+                        bias_tensor = self.param_dict['ip1.bias'].detach()
+
                     elif layer in 'ip2.weight' :
                         weight = self.param_dict['ip2.weight'].cpu().detach().numpy()
                         bias = self.param_dict['ip2.bias'].cpu().detach().numpy()
 
+                        # Reprod
+                        weight_tensor = self.param_dict['ip2.weight'].detach()
+                        bias_tensor = self.param_dict['ip2.bias'].detach()
+
                     bias_reshaped = bias.reshape(bias.shape[0],-1)
                     concat_weight = np.concatenate([weight, bias_reshaped], axis = 1)
+
+                    # Reprod
+                    bias_reshaped_tensor = bias_tensor.view(bias.shape[0], -1)
+                    concat_weight_tensor = torch.cat((weight_tensor, bias_reshaped_tensor), 1)
 
                     
                     # get index
                     self.output_channel_index[index] = self.get_output_channel_index(torch.from_numpy(concat_weight), layer_id)
 
+                    # Reprod
+                    # get index
+                    self.output_channel_index_tensor[index] = self.get_output_channel_index(concat_weight_tensor, layer_id)
+
                     # make scale matrix with bias
                     x = create_scaling_mat_ip_thres_bias(concat_weight, np.array(self.output_channel_index[index]), self.threshold, self.model_type)
                     z = torch.from_numpy(x).type(dtype=torch.float)
-                    
+
+                    # Reprod
+                    # make scale matrix with bias
+                    z_tensor = create_scaling_mat_ip_thres_bias_tensor(concat_weight_tensor, self.output_channel_index_tensor[index], self.threshold, self.model_type)
+
                     if self.cuda:
                         z = z.cuda()
                     
