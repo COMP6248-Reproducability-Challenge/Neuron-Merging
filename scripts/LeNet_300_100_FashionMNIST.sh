@@ -6,6 +6,7 @@ python main.py \
    --arch LeNet_300_100 \
    --dataset FashionMNIST \
    --pretrained saved_models/LeNet_300_100.original.300_100.bias.pth.tar \
+   --implementation original \
    --evaluate
 }
 
@@ -20,11 +21,12 @@ python main.py \
    --model-type prune \
    --pretrained saved_models/LeNet_300_100.original.300_100.bias.pth.tar \
    --pruning-ratio $2 \
+   --implementation original \
    --evaluate
 }
 
 LeNet_300_100_merge(){
-echo -e "\nLeNet_300_100 merge $1 $2\n"
+echo -e "\nLeNet_300_100 merge $1 $2 $3\n"
 python main.py \
    --arch LeNet_300_100 \
    --dataset FashionMNIST \
@@ -35,6 +37,7 @@ python main.py \
    --pretrained saved_models/LeNet_300_100.original.300_100.bias.pth.tar \
    --pruning-ratio $2 \
    --threshold 0.45 \
+   --implementation $3 \
    --evaluate
 }
 
@@ -45,14 +48,16 @@ help() {
     echo "    -t ARG		model type: original | prune | merge (default: original)."
     echo "    -c ARG		criterion : l1-norm | l2-norm | l2-GM. (default: l1-norm)"
     echo "    -r ARG 		pruning ratio : (default: 0.5)."
+    echo "    -i ARG    implementation: original | reimplementation (default: original)"
     exit 0
 }
 
 model_type=original
 criterion=l1-norm
 pruning_ratio=0.5
+implementation=original
 
-while getopts "t:c:r:h" opt
+while getopts "t:c:r:i:h" opt
 do
   case $opt in
 	  t) model_type=$OPTARG
@@ -61,10 +66,12 @@ do
       ;;
 	  r) pruning_ratio=$OPTARG
       ;;
+    i) implementation=$OPTARG
+      ;;
     h) help ;;
     ?) help ;;
   esac
 done
 
 
-LeNet_300_100_"$model_type" $criterion $pruning_ratio
+LeNet_300_100_"$model_type" $criterion $pruning_ratio $implementation

@@ -9,6 +9,7 @@ python main.py \
    --depth-wide 56 \
    --dataset cifar10 \
    --pretrained saved_models/ResNet.cifar10.original.56.pth.tar \
+   --implementation original \
    --evaluate
 }
 
@@ -24,11 +25,12 @@ python main.py \
    --model-type prune \
    --pretrained saved_models/ResNet.cifar10.original.56.pth.tar \
    --pruning-ratio $2 \
+   --implementation original \
    --evaluate 
 }
 
 ResNet56_merge(){
-echo -e "\nResNet56 merge $1 $2\n"
+echo -e "\nResNet56 merge $1 $2 $3\n"
 python main.py \
    --arch ResNet \
    --depth-wide 56 \
@@ -41,6 +43,7 @@ python main.py \
    --pruning-ratio $2 \
    --threshold 0.1 \
    --lamda 0.85 \
+   --implementation $3 \
    --evaluate 
 }
 
@@ -51,14 +54,16 @@ help() {
     echo "    -t ARG    model type: original | prune | merge (default: original)."
     echo "    -c ARG    criterion : l1-norm | l2-norm | l2-GM (default: l1-norm)."
     echo "    -r ARG    pruning ratio : (default: 0.2)."
+    echo "    -i ARG    implementation: original | reimplementation (default: original)"
     exit 0
 }
 
 model_type=original
 criterion=l1-norm
 pruning_ratio=0.2
+implementation=original
 
-while getopts "t:c:r:h" opt
+while getopts "t:c:r:i:h" opt
 do
     case $opt in
 	t) model_type=$OPTARG
@@ -67,10 +72,12 @@ do
           ;;
 	r) pruning_ratio=$OPTARG
           ;;
+  i) implementation=$OPTARG
+          ;;
         h) help ;;
         ?) help ;;
     esac
 done
 
 
-ResNet56_$model_type $criterion $pruning_ratio
+ResNet56_$model_type $criterion $pruning_ratio $implementation

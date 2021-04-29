@@ -20,6 +20,7 @@ import models
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 from decompose import Decompose
+from decompose_re import DecomposeRe
 
 def save_state(model, acc):
     print('==> Saving model ...')
@@ -203,6 +204,8 @@ if __name__=='__main__':
             help='schedule : (default: [100,200])')
     parser.add_argument('--depth-wide', action='store', default=None,
             help='depth and wide (default: None)')
+    parser.add_argument('--implementation', action='store', default='original',
+            help='implementation : original | reimplementation')
 
     args = parser.parse_args()
     
@@ -355,7 +358,13 @@ if __name__=='__main__':
 
     # weight initialization
     if args.retrain:
-        decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+        if args.implementation == 'original':
+            decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+        elif args.implementation == 'reimplementation':
+            decomposed_list = DecomposeRe(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+        else:
+            print('ERROR: invalid implementation')
+            exit()
         model = weight_init(model, decomposed_list, args.target)
 
 

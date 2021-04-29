@@ -91,11 +91,7 @@ def alg1_conv(weight, ind, threshold, bn_weight, bn_bias, bn_mean, bn_var, lam, 
 
             F_n = weight[i, :]
             F_star_n, p_star, sim, scale = alg3(F_n, i, Y_i, ind, bn_weight, bn_bias, bn_mean, bn_var, lam)
-            # if i % 100 == 0:
-            #     print("pytorch")
-            #     print(p_star)
-            #     print(sim)
-            #     print(scale)
+
             if threshold and sim >= threshold:
                 Z_i[i, p_star] = scale
 
@@ -325,13 +321,6 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
                 mu_2 = bn_mean[chosen_i]
                 sigma_2 = bn_var[chosen_i]
 
-                # if m % 10 == 0:
-                #     print("g ", gamma_2)
-                #     print("b ", beta_2)
-                #     print("m ", mu_2)
-                #     print("s ", sigma_2)
-                #     print("norm ", chosen_norm)
-
                 # compute cosine sim
                 cos_list.append(chosen_cos)
                 
@@ -520,6 +509,7 @@ class Decompose:
 
                 # first classifier
                 else:
+                    print(original.shape[0], z.shape[0])
                     pruned = torch.zeros(original.shape[0],z.shape[0])
 
                     if self.cuda:
