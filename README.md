@@ -32,14 +32,15 @@ Python environment & main libraries:
 To test LeNet-300-100 model on FashionMNIST, run:
 
 ```eval
-bash scripts/LeNet_300_100_FashionMNIST.sh -t [model type] -c [criterion] -r [pruning ratio]
+bash scripts/LeNet_300_100_FashionMNIST.sh -t [model type] -c [criterion] -r [pruning ratio] -i [implementation]
 ```
 
-You can use three arguments for this script:
+You can use four arguments for this script:
 
 - model type: original | prune | merge
 - pruning criterion : l1-norm | l2-norm | l2-GM
 - pruning ratio : 0.0 ~ 1.0
+- implementation : original | reimplementation
 
 
 
@@ -62,13 +63,14 @@ bash scripts/LeNet_300_100_FashionMNIST.sh -t merge -c l1-norm -r 0.5
 To test VGG-16 model on CIFAR-10, run:
 
 ```eval
-bash scripts/VGG16_CIFAR10.sh -t [model type] -c [criterion]
+bash scripts/VGG16_CIFAR10.sh -t [model type] -c [criterion] -i [implementation]
 ```
 
-You can use two arguments for this script
+You can use three arguments for this script
 
 - model type: original | prune | merge
 - pruning criterion: l1-norm | l2-norm | l2-GM
+- implementation : original | reimplementation
 
 
 
@@ -85,13 +87,14 @@ All the hyperparameters are as described in the supplementary material.
 After training, to test VGG-16 model on CIFAR-100, run:
 
 ```eval
-bash scripts/VGG16_CIFAR100.sh -t [model type] -c [criterion]
+bash scripts/VGG16_CIFAR100.sh -t [model type] -c [criterion] -i [implementation]
 ```
 
-You can use two arguments for this script
+You can use three arguments for this script
 
 - model type: original | prune | merge
 - pruning criterion: l1-norm | l2-norm | l2-GM
+- implementation : original | reimplementation
 
 
 
@@ -100,28 +103,30 @@ You can use two arguments for this script
 To test ResNet-56 model on CIFAR-10, run:
 
 ```eval
-bash scripts/ResNet56_CIFAR10.sh -t [model type] -c [criterion] -r [pruning ratio]
+bash scripts/ResNet56_CIFAR10.sh -t [model type] -c [criterion] -r [pruning ratio] -i [implementation]
 ```
 
-You can use three arguments for this script
+You can use four arguments for this script
 
 - model type: original | prune | merge
 - pruning method : l1-norm | l2-norm | l2-GM
 - pruning ratio : 0.0 ~ 1.0
+- implementation : original | reimplementation
 
 
 
 To test WideResNet-40-4 model on CIFAR-10, run:
 
 ```eval
-bash scripts/WideResNet_40_4_CIFAR10.sh -t [model type] -c [criterion] -r [pruning ratio]
+bash scripts/WideResNet_40_4_CIFAR10.sh -t [model type] -c [criterion] -r [pruning ratio] -i [implementation]
 ```
 
-You can use three arguments for this script
+You can use four arguments for this script
 
 - model type: original | prune | merge
 - pruning method : l1-norm | l2-norm | l2-GM
 - pruning ratio : 0.0 ~ 1.0
+- implementation : original | reimplementation
 
 
 
