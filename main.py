@@ -157,9 +157,9 @@ def weight_init(model, decomposed_weight_list, target):
 if __name__=='__main__':
     # settings
     parser = argparse.ArgumentParser(description='Neuron Merging Example')
-    parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=32, metavar='N',
             help='input batch size for training (default: 128)')
-    parser.add_argument('--test-batch-size', type=int, default=256, metavar='N',
+    parser.add_argument('--test-batch-size', type=int, default=32, metavar='N',
             help='input batch size for testing (default: 256)')
     parser.add_argument('--epochs', type=int, default=200, metavar='N',
             help='number of epochs to train (default: 200)')

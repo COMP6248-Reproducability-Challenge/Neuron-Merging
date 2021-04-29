@@ -19,7 +19,7 @@ cwd = os.getcwd()
 sys.path.append(cwd+'/../')
 
 # Reprod
-def alg1(weight, ind, threshold, model_type):
+def alg1_FC(weight, ind, threshold, model_type):
     '''
     weight - 2D matrix (n_{i+1}, n_i), torch.Tensor
     ind - chosen indices to remain, list
@@ -29,7 +29,7 @@ def alg1(weight, ind, threshold, model_type):
     # Z_i == scaling_mat
 
     Y_i = weight[ind, :]
-    Z_i = torch.zeros(weight.shape[0], Y_i.shape[0])
+    Z_i = torch.zeros(weight.shape[0], Y_i.shape[0], dtype=torch.float32)
     for i in range(weight.shape[0]):
         if i in ind: # selected neuron
             p = ind.index(i)
@@ -54,7 +54,8 @@ def alg2(w_n, Y_i):
     cosine_sim = []
     cos = nn.CosineSimilarity(dim=0, eps=1e-8)
     for i in range(Y_i.shape[0]):
-        cosine_sim.append(cos(Y_i[i,:], w_n))
+        w = Y_i[i,:]
+        cosine_sim.append(cos(w_n, w))
     sim = max(cosine_sim)
     max_ind = cosine_sim.index(sim)
     w_star_n = Y_i[max_ind, :]
@@ -63,10 +64,123 @@ def alg2(w_n, Y_i):
     scale = w_n_norm / w_star_n_norm
     return w_star_n, max_ind, sim, scale
 
-def alg3():
-    return True
+def alg1_conv(weight, ind, threshold, bn_weight, bn_bias, bn_mean, bn_var, lam, model_type):
+    '''
+    weight - 4D tensor (N_{i+1}, N_i, K, K), torch.Tensor
+    ind - chosen indices to remain, list
+    threshold - cosine similarity threshold
+    bn_weight, bn_bias - parameters of batch norm layer right after the conv layer
+    bn_mean, bn_var - running_mean, running_var of BN (for inference)
+    lam - how much to consider cosine sim over bias, float value between 0 and 1
+    '''
+    # Y_i == weight_chosen
+    # Z_i == scaling_mat
+
+    # Reshaping the conv filters into 1D tensors
+    weight = weight.reshape(weight.shape[0], -1)
+    Y_i = weight[ind, :]
+    Z_i = torch.zeros(weight.shape[0], Y_i.shape[0], dtype=torch.float32)
+
+    for i in range(weight.shape[0]):
+        if i in ind: # selected neuron
+            p = ind.index(i)
+            Z_i[i, p] = 1
+        else: # pruned neuron
+            if model_type == 'prune':
+                continue
+
+            F_n = weight[i, :]
+            F_star_n, p_star, sim, scale = alg3(F_n, i, Y_i, ind, bn_weight, bn_bias, bn_mean, bn_var, lam)
+            # if i % 100 == 0:
+            #     print("pytorch")
+            #     print(p_star)
+            #     print(sim)
+            #     print(scale)
+            if threshold and sim >= threshold:
+                Z_i[i, p_star] = scale
+
+    return Y_i, Z_i
+
+def alg3(F_n, F_n_ind, Y_i, ind, gamma_i, beta_i, mu_i, sigma_i, lam):
+    '''
+    F_n - 3D weight tensor (N_i, K, K), torch.Tensor
+    Y_i - 2D weight tensor (P_{i+1}, N_i x K x K), torch.Tensor
+    ind - indices of selected neurons
+    mu_i - running_mean (for inference)
+    sigma_i - running_var (for inference)
+    gamma_i - batch norm weight
+    beta_i - batch norm bias
+    lam -  how much to consider cosine sim over bias, float value between 0 and 1
+    bn_weight, bn_bias - parameters of batch norm layer right after the conv layer
+    bn_mean, bn_var - running_mean, running_var of BN (for inference)
+    lam -
+    '''
+    # F_n == weight
+    # Y_i == weight_chosen
+    # gamma_i == bn_weight
+    # beta_i == bn_bias
+    # mu_i == bn_mean
+    # sigma_i == bn_var
+    cos_list = []
+    bias_list = []
+    scale_list = []
+
+    cos = nn.CosineSimilarity(dim=0, eps=1e-8)
+
+    gamma_1 = gamma_i[F_n_ind]
+    beta_1 = beta_i[F_n_ind]
+    mu_1 = mu_i[F_n_ind]
+    sigma_1 = sigma_i[F_n_ind]
+    x_1_norm = torch.norm(F_n, p='fro')
+
+    assert Y_i.shape[0] == len(ind)
+    for m in range(Y_i.shape[0]):
+        F_m = Y_i[m]
+        cos_dist = 1 - cos(F_n, F_m)
+        cos_list.append(cos_dist)
+
+        # The BN parameters contain values for all of the neurons.
+        # ind[m] returns the original index of neuron m
+        gamma_2 = gamma_i[ind[m]]
+        beta_2 = beta_i[ind[m]]
+        mu_2 = mu_i[ind[m]]
+        sigma_2 = sigma_i[ind[m]]
+        x_2_norm = torch.norm(F_m, p='fro')
+
+        s = x_1_norm / x_2_norm
+        S = s * (gamma_2 / gamma_1) * (sigma_1 / sigma_2)
+        scale_list.append(S)
+
+        B = (gamma_2 / sigma_2) * (s * ((-(sigma_1 * beta_1) / gamma_1) + mu_1) - mu_2) + beta_2 # eq 8
+
+        bias_list.append(abs(B) / S)
+
+    bias_list_normalised = normalise_bias(bias_list)
+    dist_list = get_dist_list(cos_list, bias_list_normalised, lam)
+    min_dist = min(dist_list)
+    min_ind = dist_list.index(min_dist)
+    F_star_n = Y_i[min_ind,:]
+    sim = 1 - cos_list[min_ind] # convert cos dist to cos sim
+    scale = scale_list[min_ind]
+
+    return F_star_n, min_ind, sim, scale
 
 
+def normalise_bias(bias_list):
+    min_bias = min(bias_list)
+    max_bias = max(bias_list)
+    bias_list_normalised = [(b - min_bias) / (max_bias - min_bias) for b in bias_list]
+
+    return bias_list_normalised
+
+
+def get_dist_list(cos_list, bias_list, lam):
+    dist_list = []
+
+    for (c, b) in zip(cos_list, bias_list):
+        dist_list.append(c * lam + b * (1-lam))
+
+    return dist_list
 
 
 def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
@@ -170,8 +284,7 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
     assert(bn_bias.shape[0] == weight.shape[0])
     assert(bn_mean.shape[0] == weight.shape[0])
     assert(bn_var.shape[0] == weight.shape[0])
-    
-    
+
     weight = weight.reshape(weight.shape[0], -1)
 
     cosine_dist = pairwise_distances(weight, metric="cosine")
@@ -196,12 +309,13 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
             beta_1 = bn_bias[i]
             mu_1 = bn_mean[i]
             sigma_1 = bn_var[i]
-            
+
             # choose one
             cos_list = []
             scale_list = []
             bias_list = []
-            
+
+            m = 0
             for chosen_i in ind:
                 chosen_weight = weight[chosen_i]
                 chosen_norm = np.linalg.norm(chosen_weight, ord = 2)
@@ -210,7 +324,14 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
                 beta_2 = bn_bias[chosen_i]
                 mu_2 = bn_mean[chosen_i]
                 sigma_2 = bn_var[chosen_i]
-                
+
+                # if m % 10 == 0:
+                #     print("g ", gamma_2)
+                #     print("b ", beta_2)
+                #     print("m ", mu_2)
+                #     print("s ", sigma_2)
+                #     print("norm ", chosen_norm)
+
                 # compute cosine sim
                 cos_list.append(chosen_cos)
                 
@@ -227,6 +348,7 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
                 bias_term_inference = bias_term_inference/scale_term_inference
 
                 bias_list.append(bias_term_inference)
+                m += 1
 
             assert(len(cos_list) == len(ind))
             assert(len(scale_list) == len(ind))
@@ -361,7 +483,17 @@ class Decompose:
                                                                                 bn_weight, bn_bias, bn_mean, bn_var, self.lamda, self.model_type)
 
                         z = torch.from_numpy(x).type(dtype=torch.float)
-                        
+
+                        # Reprod
+                        bn_weight_tensor = bn[index+1].cpu().detach()
+                        bn_bias_tensor = bn[index+2].cpu().detach()
+                        bn_mean_tensor = bn[index+3].cpu().detach()
+                        bn_var_tensor = bn[index+4].cpu().detach()
+
+                        _, z = alg1_conv(self.param_dict[layer].cpu().detach(), self.output_channel_index[index], self.threshold,
+                                                                                bn_weight_tensor, bn_bias_tensor, bn_mean_tensor, bn_var_tensor, self.lamda, self.model_type)
+
+                        # assert torch.allclose(z, z_tensor)
                         if self.cuda:
                             z = z.cuda()
 
@@ -600,7 +732,7 @@ class Decompose:
                     # make scale matrix with bias
                     z_tensor = create_scaling_mat_ip_thres_bias_tensor(concat_weight_tensor, self.output_channel_index_tensor[index], self.threshold, self.model_type)
 
-                    _, z = alg1(concat_weight_tensor, self.output_channel_index_tensor[index], self.threshold, self.model_type)
+                    _, z = alg1_FC(concat_weight_tensor, self.output_channel_index_tensor[index], self.threshold, self.model_type)
 
                     if self.cuda:
                         z = z.cuda()
