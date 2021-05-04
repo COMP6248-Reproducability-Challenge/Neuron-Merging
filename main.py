@@ -176,7 +176,7 @@ if __name__=='__main__':
     parser.add_argument('--log-interval', type=int, default=100, metavar='N',
             help='how many batches to wait before logging training status')
     parser.add_argument('--arch', action='store', default='VGG',
-            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100')
+            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100 | Alexnet')
     parser.add_argument('--pretrained', action='store', default=None,
             help='pretrained model')
     parser.add_argument('--evaluate', action='store_true', default=False,
@@ -188,7 +188,7 @@ if __name__=='__main__':
     parser.add_argument('--target', action='store', default='conv',
             help='decomposing target: default=None | conv | ip')
     parser.add_argument('--dataset', action='store', default='cifar10',
-            help='dataset: cifar10 | cifar100 | FashionMNIST')
+            help='dataset: cifar10 | cifar100 | FashionMNIST | ImageNet')
     parser.add_argument('--criterion', action='store', default='l1-norm',
             help='criterion : l1-norm | l2-norm | l2-GM')
     parser.add_argument('--threshold', type=float, default=1,
@@ -214,7 +214,7 @@ if __name__=='__main__':
     if not (args.target in [None, 'conv', 'ip']):
         print('ERROR: Please choose the correct decompose target')
         exit()
-    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet', 'SqueezeNet']):
+    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet']):
         print('ERROR: specified arch is not suppported')
         exit()
     
@@ -359,8 +359,6 @@ if __name__=='__main__':
         model = models.WideResNet(args.depth_wide[0], num_classes, widen_factor=args.depth_wide[1], cfg=cfg)
     elif args.arch == 'Alexnet':
         model = models.Alexnet(num_classes, cfg=cfg)
-    elif args.arch == 'Squeezenet':
-        model = models.Squeezenet(class_num, cfg=cfg)
     else:
         pass
 
@@ -386,7 +384,7 @@ if __name__=='__main__':
         if args.arch in ['VGG','LeNet_300_100','ResNet','WideResNet']:
             decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
-        elif args.arch in ['Alexnet','SqueezeNet']:
+        elif args.arch in ['Alexnet']:
             decomposed_list = Decompose(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
 
