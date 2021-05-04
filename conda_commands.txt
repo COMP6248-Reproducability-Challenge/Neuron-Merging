@@ -32,4 +32,5 @@ then remove it from the dependencies (so there are no duplicates)
 # sources
 https://towardsdatascience.com/getting-started-with-python-environments-using-conda-32e9f2779307
 https://medium.com/swlh/setting-up-a-conda-environment-in-less-than-5-minutes-e64d8fc338e4
+https://sotonproduction.service-now.com/serviceportal?id=kb_article_view&sysparm_article=KB0043872&sys_kb_id=e160e7c0db4ad058bc72b29f29961926&spa=1
 
