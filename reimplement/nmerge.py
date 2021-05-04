@@ -157,7 +157,13 @@ def neuron_merge(model,
                  nn.Identity)
     check_type = lambda val: isinstance(val["object"], supported)
     check_dropout = lambda val: not isinstance(val["object"], nn.Dropout)
+    i=0
     for start, end in zip(trainable[:-1], trainable[1:]):
+        i+=1
+        print(i)
+        print(start)
+        print(end)
+        print(new_model)
         #get layers, and check if supported
         layers = list(filter(check_dropout, list(zip(*arch))[1][start:end+1]))
         if not all(map(check_type, layers)):
@@ -165,11 +171,12 @@ def neuron_merge(model,
         
         #find merged values
         merged_layers = merge_on_layers(layers,
-                                        threshold=0.9,
-                                        epochs = 100,
-                                        max_acc = 5e-3)
+                                        threshold=threshold,
+                                        epochs = epochs,
+                                        max_acc = max_acc)
         #assign values to model
         assign_weights(layers[0]["object"], merged_layers[0])
         assign_weights(layers[-1]["object"], merged_layers[-1])
     
+    print("end")
     return new_model
