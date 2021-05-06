@@ -19,6 +19,8 @@ import random
 cwd = os.getcwd()
 sys.path.append(cwd + '/../')
 
+import time
+
 
 def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
     '''
@@ -26,6 +28,7 @@ def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
     ind - chosen indices to remain, np.ndarray
     threshold - cosine similarity threshold
     '''
+    start = time.time()
     assert (type(weight) == np.ndarray)
     assert (type(ind) == np.ndarray)
 
@@ -53,7 +56,8 @@ def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
             current_norm = np.linalg.norm(current_weight)
             scaling_factor = current_norm / baseline_norm
             scaling_mat[i, max_cos_value_index] = scaling_factor
-
+    end = time.time()
+    print("orig, 1-2: {}".format(end-start))
     return scaling_mat
 
 
@@ -68,6 +72,9 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
     bn_mean, bn_var - running_mean, running_var of BN (for inference)
     lam - how much to consider cosine sim over bias, float value between 0 and 1
     '''
+
+    start = time.time()
+
     assert (type(weight) == np.ndarray)
     assert (type(ind) == np.ndarray)
     assert (type(bn_weight) == np.ndarray)
@@ -157,6 +164,8 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
 
             scaling_mat[i, min_ind] = min_scale
 
+    end = time.time()
+    print("orig, 1-3: {}".format(end-start))
     return scaling_mat
 
 
@@ -260,7 +269,6 @@ class Decompose:
                                                              np.array(self.output_channel_index[index]), self.threshold,
                                                              bn_weight, bn_bias, bn_mean, bn_var, self.lamda,
                                                              self.model_type)
-
                         z = torch.from_numpy(x).type(dtype=torch.float)
 
                         if self.cuda:

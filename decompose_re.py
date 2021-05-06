@@ -3,6 +3,8 @@ import torch.nn as nn
 import numpy as np
 from scipy.spatial import distance
 
+import time
+
 
 # Algorithms 1-3 based on paper
 def alg1_FC(weight, ind, threshold, model_type):
@@ -13,6 +15,8 @@ def alg1_FC(weight, ind, threshold, model_type):
     '''
     # Y_i == weight_chosen
     # Z_i == scaling_mat
+
+    start = time.time()
 
     Y_i = weight[ind, :]
     Z_i = torch.zeros(weight.shape[0], Y_i.shape[0], dtype=torch.float32)
@@ -29,6 +33,8 @@ def alg1_FC(weight, ind, threshold, model_type):
             if sim >= threshold:
                 Z_i[i, p_star] = scale
 
+    end = time.time()
+    print("reprod, 1-2: {}".format(end-start))
     return Y_i, Z_i
 
 def alg2(w_n, Y_i):
@@ -62,6 +68,8 @@ def alg1_conv(weight, ind, threshold, bn_weight, bn_bias, bn_mean, bn_var, lam, 
     # Y_i == weight_chosen
     # Z_i == scaling_mat
 
+    start = time.time()
+
     # Reshaping the conv filters into 1D tensors
     weight = weight.reshape(weight.shape[0], -1)
     Y_i = weight[ind, :]
@@ -81,6 +89,8 @@ def alg1_conv(weight, ind, threshold, bn_weight, bn_bias, bn_mean, bn_var, lam, 
             if threshold and sim >= threshold:
                 Z_i[i, p_star] = scale
 
+    end = time.time()
+    print("reprod, 1-3: {}".format(end-start))
     return Y_i, Z_i
 
 def alg3(F_n, F_n_ind, Y_i, ind, gamma_i, beta_i, mu_i, sigma_i, lam):
@@ -237,6 +247,7 @@ class DecomposeRe:
                                          self.threshold,
                                          bn_weight_tensor, bn_bias_tensor, bn_mean_tensor, bn_var_tensor,
                                          self.lamda, self.model_type)
+
                         if self.cuda:
                             z = z.cuda()
 
