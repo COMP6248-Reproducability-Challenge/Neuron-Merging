@@ -67,11 +67,6 @@ model = Alexnet(num_classes=100,cfg=None)
 model.train()
 model.cuda()
 
-# model.classifier[6] = nn.Linear(4096,100)
-
-# model.classifier[6].weight.data.uniform_(0.0, 1.0)
-# model.classifier[6].bias.data.fill_(0)
-
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 criterion = nn.CrossEntropyLoss()
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=80, gamma=0.1)
@@ -94,14 +89,9 @@ for epoch in range(epochs):
                 100. * batch_idx / len(train_loader), loss.data))
     scheduler.step()
 
-# for index, layer in enumerate(model.state_dict()):
-#     print("Index:", index)
-#     print("Layer:", layer)
-
 torch.save(model.state_dict(),'alexnet-cifar.pth')
 
 model = torch.load('alexnet-cifar.pth',map_location=torch.device('cpu'))
-#torch.save(model.state_dict(),'alexnet-cifar-sd.pth')
 model.eval()
 
 criterion = nn.CrossEntropyLoss()

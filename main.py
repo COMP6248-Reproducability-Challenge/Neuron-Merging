@@ -176,7 +176,7 @@ if __name__=='__main__':
     parser.add_argument('--log-interval', type=int, default=100, metavar='N',
             help='how many batches to wait before logging training status')
     parser.add_argument('--arch', action='store', default='VGG',
-            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100 | Alexnet')
+            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100 | Alexnet-CIFAR |Alexnet-ImageNet')
     parser.add_argument('--pretrained', action='store', default=None,
             help='pretrained model')
     parser.add_argument('--evaluate', action='store_true', default=False,
@@ -214,7 +214,7 @@ if __name__=='__main__':
     if not (args.target in [None, 'conv', 'ip']):
         print('ERROR: Please choose the correct decompose target')
         exit()
-    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet']):
+    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'Alexnet-CIFAR', 'Alexnet-ImageNet']):
         print('ERROR: specified arch is not suppported')
         exit()
     
@@ -341,7 +341,13 @@ if __name__=='__main__':
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
                 temp_cfg = cfg
                 
-            elif args.arch == 'Alexnet':
+            elif args.arch == 'Alexnet-CIFAR':
+                cfg = [4096, 4096]
+                for i in range(len(cfg)):
+                    cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
+                temp_cfg = cfg
+                
+            elif args.arch == 'Alexnet-ImageNet':
                 cfg = [4096, 4096]
                 for i in range(len(cfg)):
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
@@ -357,8 +363,10 @@ if __name__=='__main__':
         model = models.ResNet(int(args.depth_wide) ,num_classes,cfg=cfg)
     elif args.arch == 'WideResNet':
         model = models.WideResNet(args.depth_wide[0], num_classes, widen_factor=args.depth_wide[1], cfg=cfg)
-    elif args.arch == 'Alexnet':
-        model = models.Alexnet(num_classes, cfg=cfg)
+    elif args.arch == 'Alexnet-ImageNet':
+        model = models.Alexnet_ImageNet(num_classes, cfg=cfg)
+    elif args.arch == 'Alexnet-CIFAR':
+        model = models.Alexnet_CIFAR(num_classes, cfg=cfg)
     else:
         pass
 

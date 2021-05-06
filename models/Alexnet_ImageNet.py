@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 
-class Alexnet(nn.Module):
+class Alexnet_ImageNet(nn.Module):
 
     def __init__(self, num_classes, cfg):
         if cfg == None:
             cfg = [4096, 4096]
-        super(Alexnet, self).__init__()
+        super(Alexnet_ImageNet, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
             nn.ReLU(inplace=True),
