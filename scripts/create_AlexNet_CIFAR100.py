@@ -89,9 +89,7 @@ for epoch in range(epochs):
                 100. * batch_idx / len(train_loader), loss.data))
     scheduler.step()
 
-torch.save(model.state_dict(),'alexnet-cifar.pth')
-
-model = torch.load('alexnet-cifar.pth',map_location=torch.device('cpu'))
+# model = torch.load('alexnet-cifar.pth',map_location=torch.device('cpu'))
 model.eval()
 
 criterion = nn.CrossEntropyLoss()
@@ -99,6 +97,7 @@ criterion = nn.CrossEntropyLoss()
 test_loss = 0
 correct = 0
 for data, target in test_loader:
+    data, target = data.cuda(), target.cuda()
     data, target = Variable(data), Variable(target)
     output = model(data)
     test_loss += criterion(output, target).data
@@ -111,3 +110,16 @@ test_loss /= len(test_loader.dataset)
 print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'.format(
     test_loss * 512, correct, len(test_loader.dataset),
     100. * float(correct) / len(test_loader.dataset)))
+
+print('==> Saving model ...')
+state = {
+        'acc': acc,
+        'state_dict': model.state_dict(),
+        }
+for key in state['state_dict'].keys():
+    if 'module' in key:
+        print(key)
+        state['state_dict'][key.replace('module.', '')] = \
+                state['state_dict'].pop(key)
+
+torch.save(state,'saved_models/alexnet-cifar.pth')
