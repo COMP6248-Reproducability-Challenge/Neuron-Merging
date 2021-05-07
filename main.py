@@ -392,7 +392,7 @@ if __name__=='__main__':
         if args.arch in ['VGG','LeNet_300_100','ResNet','WideResNet']:
             decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
-        elif args.arch in ['Alexnet']:
+        elif args.arch in ['Alexnet-ImageNet', 'Alexnet-CIFAR']:
             decomposed_list = Decompose(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
 
