@@ -25,7 +25,48 @@ Python environment & main libraries:
 * scikit-learn 0.22.1
 * torchvision 0.6.0
 
+## AlexNet
 
+Two versions of AlexNet are available: one trained on the CIFAR100 and one trained on the ImageNet dataset.
+
+To create the CIFAR100 model, run:
+
+```eval
+python scripts/create_AlexNet_CIFAR100.py
+```
+
+To download the pretrained ImageNet model, run:
+
+```eval
+python scripts/create_AlexNet_ImageNet.py
+```
+
+
+To test AlexNet on CIFAR100, run:
+
+```eval
+bash scripts/AlexNet_CIFAR100.sh -t [model type] -c [criterion] -r [pruning ratio] -i [implementation]
+```
+
+You can use four arguments for this script:
+
+- model type: original | prune | merge
+- pruning criterion : l1-norm | l2-norm | l2-GM
+- pruning ratio : 0.0 ~ 1.0
+- implementation : original | reimplementation
+
+To test AlexNet on ImageNet, run:
+
+```eval
+bash scripts/AlexNet_ImageNet.sh -t [model type] -c [criterion] -r [pruning ratio] -i [implementation]
+```
+
+You can use four arguments for this script:
+
+- model type: original | prune | merge
+- pruning criterion : l1-norm | l2-norm | l2-GM
+- pruning ratio : 0.0 ~ 1.0
+- implementation : original | reimplementation
 
 ## LeNet-300-100
 

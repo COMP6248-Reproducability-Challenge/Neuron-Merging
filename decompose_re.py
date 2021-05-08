@@ -3,8 +3,6 @@ import torch.nn as nn
 import numpy as np
 from scipy.spatial import distance
 
-import time
-
 
 # Algorithms 1-3 based on paper
 def alg1_FC(weight, ind, threshold, model_type):
@@ -15,8 +13,6 @@ def alg1_FC(weight, ind, threshold, model_type):
     '''
     # Y_i == weight_chosen
     # Z_i == scaling_mat
-
-    start = time.time()
 
     Y_i = weight[ind, :]
     Z_i = torch.zeros(weight.shape[0], Y_i.shape[0], dtype=torch.float32)
@@ -33,8 +29,6 @@ def alg1_FC(weight, ind, threshold, model_type):
             if sim >= threshold:
                 Z_i[i, p_star] = scale
 
-    end = time.time()
-    print("reprod, 1-2: {}".format(end-start))
     return Y_i, Z_i
 
 def alg2(w_n, Y_i):
@@ -68,8 +62,6 @@ def alg1_conv(weight, ind, threshold, bn_weight, bn_bias, bn_mean, bn_var, lam, 
     # Y_i == weight_chosen
     # Z_i == scaling_mat
 
-    start = time.time()
-
     # Reshaping the conv filters into 1D tensors
     weight = weight.reshape(weight.shape[0], -1)
     Y_i = weight[ind, :]
@@ -89,8 +81,6 @@ def alg1_conv(weight, ind, threshold, bn_weight, bn_bias, bn_mean, bn_var, lam, 
             if threshold and sim >= threshold:
                 Z_i[i, p_star] = scale
 
-    end = time.time()
-    print("reprod, 1-3: {}".format(end-start))
     return Y_i, Z_i
 
 def alg3(F_n, F_n_ind, Y_i, ind, gamma_i, beta_i, mu_i, sigma_i, lam):
@@ -474,6 +464,55 @@ class DecomposeRe:
 
                 else:
                     pass
+            # AlexNet
+            elif self.arch in ['AlexNet_CIFAR100', 'AlexNet_ImageNet']:
+                if layer in ['classifier.1.weight', 'classifier.4.weight']:
+
+                    # Merge scale matrix
+                    if z != None:
+                        if self.cuda:
+                            z = z.cuda()
+                            original = original.cuda()
+                        original = torch.mm(original, z)
+                    layer_id += 1
+
+                    # concatenate weight and bias
+                    if layer in 'classifier.1.weight':
+                        weight_tensor = self.param_dict['classifier.1.weight'].cpu().detach()
+                        bias_tensor = self.param_dict['classifier.1.bias'].cpu().detach()
+
+                    elif layer in 'classifier.4.weight':
+                        weight_tensor = self.param_dict['classifier.4.weight'].cpu().detach()
+                        bias_tensor = self.param_dict['classifier.4.bias'].cpu().detach()
+
+                    bias_reshaped_tensor = bias_tensor.reshape(bias_tensor.shape[0], -1)
+                    concat_weight_tensor = torch.cat([weight_tensor, bias_reshaped_tensor], 1)
+
+                    # get index
+                    self.output_channel_index[index] = self.get_output_channel_index(concat_weight_tensor, layer_id)
+
+                    _, z = alg1_FC(concat_weight_tensor, self.output_channel_index[index], self.threshold, self.model_type)
+
+                    if self.cuda:
+                        z = z.cuda()
+                    # pruned
+                    pruned = original[self.output_channel_index[index], :]
+                    # update next input channel
+                    input_channel_index = self.output_channel_index[index]
+                    # update decompose weight
+                    self.decompose_weight[index] = pruned
+
+                elif layer in 'classifier.6.weight':
+                    if self.cuda:
+                        z = z.cuda()
+                        original = original.cuda()
+                    original = torch.mm(original, z)
+                    # update decompose weight
+                    self.decompose_weight[index] = original
+
+                # update bias
+                elif layer in ['classifier.1.bias', 'classifier.4.bias']:
+                    self.decompose_weight[index] = original[input_channel_index]
 
     def get_output_channel_index(self, value, layer_id):
         output_channel_index = []

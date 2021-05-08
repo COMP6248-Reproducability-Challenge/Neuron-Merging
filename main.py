@@ -147,7 +147,6 @@ def adjust_learning_rate(optimizer, epoch, gammas, schedule):
 
 
 def weight_init(model, decomposed_weight_list, target):
-
     for layer in model.state_dict():
         decomposed_weight = decomposed_weight_list.pop(0)
         model.state_dict()[layer].copy_(decomposed_weight)
@@ -177,7 +176,7 @@ if __name__=='__main__':
     parser.add_argument('--log-interval', type=int, default=100, metavar='N',
             help='how many batches to wait before logging training status')
     parser.add_argument('--arch', action='store', default='VGG',
-            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100')
+            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100 | AlexNet_CIFAR100 |AlexNet_ImageNet')
     parser.add_argument('--pretrained', action='store', default=None,
             help='pretrained model')
     parser.add_argument('--evaluate', action='store_true', default=False,
@@ -189,7 +188,7 @@ if __name__=='__main__':
     parser.add_argument('--target', action='store', default='conv',
             help='decomposing target: default=None | conv | ip')
     parser.add_argument('--dataset', action='store', default='cifar10',
-            help='dataset: cifar10 | cifar100 | FashionMNIST')
+            help='dataset: cifar10 | cifar100 | FashionMNIST | ImageNet')
     parser.add_argument('--criterion', action='store', default='l1-norm',
             help='criterion : l1-norm | l2-norm | l2-GM')
     parser.add_argument('--threshold', type=float, default=1,
@@ -217,7 +216,7 @@ if __name__=='__main__':
     if not (args.target in [None, 'conv', 'ip']):
         print('ERROR: Please choose the correct decompose target')
         exit()
-    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100']):
+    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'AlexNet_CIFAR100', 'AlexNet_ImageNet']):
         print('ERROR: specified arch is not suppported')
         exit()
     
@@ -286,6 +285,22 @@ if __name__=='__main__':
         test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
         num_classes = 10
+        
+    elif args.dataset == 'ImageNet':
+        preprocess = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        val_data = datasets.ImageFolder(root='/data/ILSVRC2012/val', transform=preprocess)
+        train_data = datasets.ImageFolder(root='/data/ILSVRC2012/train', transform=preprocess)
+
+        kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+        train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, **kwargs)
+        test_loader = torch.utils.data.DataLoader(val_data, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+
+        num_classes = 1000
 
     else : 
         pass
@@ -319,6 +334,7 @@ if __name__=='__main__':
                 for i in range(len(cfg)):
                     cfg[i] = int(cfg[i] * (1 - args.pruning_ratio))
                     temp_cfg[i] = cfg[i] * args.depth_wide[1]
+                    
         
         elif args.target == 'ip' :
             if args.arch == 'LeNet_300_100':
@@ -326,7 +342,18 @@ if __name__=='__main__':
                 for i in range(len(cfg)):
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
                 temp_cfg = cfg
-            pass
+                
+            elif args.arch == 'AlexNet_CIFAR100':
+                cfg = [4096, 4096]
+                for i in range(len(cfg)):
+                    cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
+                temp_cfg = cfg
+                
+            elif args.arch == 'AlexNet_ImageNet':
+                cfg = [4096, 4096]
+                for i in range(len(cfg)):
+                    cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
+                temp_cfg = cfg
 
 
     # generate the model
@@ -338,34 +365,52 @@ if __name__=='__main__':
         model = models.ResNet(int(args.depth_wide) ,num_classes,cfg=cfg)
     elif args.arch == 'WideResNet':
         model = models.WideResNet(args.depth_wide[0], num_classes, widen_factor=args.depth_wide[1], cfg=cfg)
+    elif args.arch == 'AlexNet_ImageNet':
+        model = models.Alexnet_ImageNet(num_classes, cfg=cfg)
+    elif args.arch == 'AlexNet_CIFAR100':
+        model = models.Alexnet_CIFAR(num_classes, cfg=cfg)
     else:
         pass
 
     if args.cuda:
         model.cuda()
 
-
     # pretrain
     best_acc = 0.0
     best_epoch = 0
     if args.pretrained:
-        pretrained_model = torch.load(args.pretrained)
+        if args.cuda:
+            pretrained_model = torch.load(args.pretrained)
+        else:
+            pretrained_model = torch.load(args.pretrained, map_location=torch.device('cpu'))
         best_epoch = 0
         if args.model_type == 'original':
-            best_acc = pretrained_model['acc']
-            model.load_state_dict(pretrained_model['state_dict'])
-
+            if args.arch == 'AlexNet_ImageNet':
+                model.load_state_dict(pretrained_model)
+            else:
+                best_acc = pretrained_model['acc']
+                model.load_state_dict(pretrained_model['state_dict'])
 
     # weight initialization
     if args.retrain:
-        if args.implementation == 'original':
-            decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
-        elif args.implementation == 'reimplementation':
-            decomposed_list = DecomposeRe(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
-        else:
-            print('ERROR: invalid implementation')
-            exit()
-        model = weight_init(model, decomposed_list, args.target)
+        if args.arch in ['VGG','LeNet_300_100','ResNet','WideResNet', 'AlexNet_CIFAR100']:
+            if args.implementation == 'original':
+                decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+            elif args.implementation == 'reimplementation':
+                decomposed_list = DecomposeRe(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+            else:
+                print('ERROR: invalid implementation')
+                exit()
+            model = weight_init(model, decomposed_list, args.target)
+        elif args.arch in ['AlexNet_ImageNet']:
+            if args.implementation == 'original':
+                decomposed_list = Decompose(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+            elif args.implementation == 'reimplementation':
+                decomposed_list = DecomposeRe(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+            else:
+                print('ERROR: invalid implementation')
+                exit()
+            model = weight_init(model, decomposed_list, args.target)
 
 
     # print the number of model parameters

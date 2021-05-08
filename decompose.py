@@ -19,8 +19,6 @@ import random
 cwd = os.getcwd()
 sys.path.append(cwd + '/../')
 
-import time
-
 
 def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
     '''
@@ -28,7 +26,6 @@ def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
     ind - chosen indices to remain, np.ndarray
     threshold - cosine similarity threshold
     '''
-    start = time.time()
     assert (type(weight) == np.ndarray)
     assert (type(ind) == np.ndarray)
 
@@ -56,8 +53,7 @@ def create_scaling_mat_ip_thres_bias(weight, ind, threshold, model_type):
             current_norm = np.linalg.norm(current_weight)
             scaling_factor = current_norm / baseline_norm
             scaling_mat[i, max_cos_value_index] = scaling_factor
-    end = time.time()
-    print("orig, 1-2: {}".format(end-start))
+
     return scaling_mat
 
 
@@ -72,9 +68,6 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
     bn_mean, bn_var - running_mean, running_var of BN (for inference)
     lam - how much to consider cosine sim over bias, float value between 0 and 1
     '''
-
-    start = time.time()
-
     assert (type(weight) == np.ndarray)
     assert (type(ind) == np.ndarray)
     assert (type(bn_weight) == np.ndarray)
@@ -164,8 +157,6 @@ def create_scaling_mat_conv_thres_bn(weight, ind, threshold,
 
             scaling_mat[i, min_ind] = min_scale
 
-    end = time.time()
-    print("orig, 1-3: {}".format(end-start))
     return scaling_mat
 
 
@@ -190,7 +181,10 @@ class Decompose:
         if len(value.size()):
 
             weight_vec = value.view(value.size()[0], -1)
-            weight_vec = weight_vec.cuda()
+            if(self.cuda):
+                weight_vec = weight_vec.cuda()
+            else:
+                weight_vec = weight_vec
 
             # l1-norm
             if self.criterion == 'l1-norm':
@@ -232,6 +226,8 @@ class Decompose:
         for index, layer in enumerate(self.param_dict):
 
             original = self.param_dict[layer]
+            if self.cuda:
+                original = original.cuda()
 
             # VGG
             if self.arch == 'VGG':
@@ -515,9 +511,57 @@ class Decompose:
                 # update bias
                 elif layer in ['ip1.bias', 'ip2.bias']:
                     self.decompose_weight[index] = original[input_channel_index]
-
-                else:
+                else :
                     pass
+            # AlexNet
+            elif self.arch in ['AlexNet_CIFAR100', 'AlexNet_ImageNet']:
+                if layer in ['classifier.1.weight','classifier.4.weight']:
+                    
+                    # Merge scale matrix
+                    if z != None:
+                        if self.cuda:
+                            z = z.cuda()
+                        original = torch.mm(original,z)
+                    layer_id += 1
+                    
+                    # concatenate weight and bias
+                    if layer in 'classifier.1.weight' :
+                        weight = self.param_dict['classifier.1.weight'].cpu().detach().numpy()
+                        bias = self.param_dict['classifier.1.bias'].cpu().detach().numpy()
+
+                    elif layer in 'classifier.4.weight' :
+                        weight = self.param_dict['classifier.4.weight'].cpu().detach().numpy()
+                        bias = self.param_dict['classifier.4.bias'].cpu().detach().numpy()
+                        
+                    bias_reshaped = bias.reshape(bias.shape[0],-1)
+                    concat_weight = np.concatenate([weight, bias_reshaped], axis = 1)
+
+                    # get index
+                    self.output_channel_index[index] = self.get_output_channel_index(torch.from_numpy(concat_weight), layer_id)
+
+                    # make scale matrix with bias
+                    x = create_scaling_mat_ip_thres_bias(concat_weight, np.array(self.output_channel_index[index]), self.threshold, self.model_type)
+                    z = torch.from_numpy(x).type(dtype=torch.float)
+                    
+                    if self.cuda:
+                        z = z.cuda()
+                    # pruned
+                    pruned = original[self.output_channel_index[index],:]
+                    # update next input channel
+                    input_channel_index = self.output_channel_index[index]
+                    # update decompose weight
+                    self.decompose_weight[index] = pruned
+                    
+                elif layer in 'classifier.6.weight':
+                    if self.cuda:
+                        z = z.cuda()
+                    original = torch.mm(original,z)
+                    # update decompose weight
+                    self.decompose_weight[index] = original
+
+                # update bias
+                elif layer in ['classifier.1.bias','classifier.4.bias']:
+                    self.decompose_weight[index] = original[input_channel_index]
 
     def main(self):
 
