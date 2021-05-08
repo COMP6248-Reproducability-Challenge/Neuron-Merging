@@ -2,7 +2,7 @@
 conda env create -f ./environment.yml
 
 # update an environment (if install during first command fails, you need to use this after)
-conda env update -f envornment.yml -n neuron_merging
+conda env update -f environment.yml -n neuron_merging
 
 # start using the environment
 conda activate neuron_merging
