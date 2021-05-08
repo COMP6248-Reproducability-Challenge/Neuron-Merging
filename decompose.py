@@ -517,7 +517,7 @@ class Decompose:
                 else :
                     pass
             # AlexNet
-            elif self.arch in ['AlexNet_CIFAR100', 'Alexnet-ImageNet']:
+            elif self.arch in ['AlexNet_CIFAR100', 'AlexNet_ImageNet']:
                 if layer in ['classifier.1.weight','classifier.4.weight']:
                     
                     # Merge scale matrix

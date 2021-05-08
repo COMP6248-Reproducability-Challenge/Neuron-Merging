@@ -175,7 +175,7 @@ if __name__=='__main__':
     parser.add_argument('--log-interval', type=int, default=100, metavar='N',
             help='how many batches to wait before logging training status')
     parser.add_argument('--arch', action='store', default='VGG',
-            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100 | AlexNet_CIFAR100 |Alexnet-ImageNet')
+            help='network structure: VGG | ResNet | WideResNet | LeNet_300_100 | AlexNet_CIFAR100 |AlexNet_ImageNet')
     parser.add_argument('--pretrained', action='store', default=None,
             help='pretrained model')
     parser.add_argument('--evaluate', action='store_true', default=False,
@@ -213,7 +213,7 @@ if __name__=='__main__':
     if not (args.target in [None, 'conv', 'ip']):
         print('ERROR: Please choose the correct decompose target')
         exit()
-    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'AlexNet_CIFAR100', 'Alexnet-ImageNet']):
+    if not (args.arch in ['VGG','ResNet','WideResNet','LeNet_300_100', 'AlexNet_CIFAR100', 'AlexNet_ImageNet']):
         print('ERROR: specified arch is not suppported')
         exit()
     
@@ -346,7 +346,7 @@ if __name__=='__main__':
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
                 temp_cfg = cfg
                 
-            elif args.arch == 'Alexnet-ImageNet':
+            elif args.arch == 'AlexNet_ImageNet':
                 cfg = [4096, 4096]
                 for i in range(len(cfg)):
                     cfg[i] = round(cfg[i] * (1 - args.pruning_ratio))
@@ -362,7 +362,7 @@ if __name__=='__main__':
         model = models.ResNet(int(args.depth_wide) ,num_classes,cfg=cfg)
     elif args.arch == 'WideResNet':
         model = models.WideResNet(args.depth_wide[0], num_classes, widen_factor=args.depth_wide[1], cfg=cfg)
-    elif args.arch == 'Alexnet-ImageNet':
+    elif args.arch == 'AlexNet_ImageNet':
         model = models.Alexnet_ImageNet(num_classes, cfg=cfg)
     elif args.arch == 'AlexNet_CIFAR100':
         model = models.Alexnet_CIFAR(num_classes, cfg=cfg)
@@ -382,16 +382,18 @@ if __name__=='__main__':
             pretrained_model = torch.load(args.pretrained, map_location=torch.device('cpu'))
         best_epoch = 0
         if args.model_type == 'original':
-            best_acc = pretrained_model['acc']
-            model.load_state_dict(pretrained_model['state_dict'])
-
+            if args.arch == 'AlexNet_ImageNet':
+                model.load_state_dict(pretrained_model)
+            else:
+                best_acc = pretrained_model['acc']
+                model.load_state_dict(pretrained_model['state_dict'])
 
     # weight initialization
     if args.retrain:
         if args.arch in ['VGG','LeNet_300_100','ResNet','WideResNet', 'AlexNet_CIFAR100']:
             decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
-        elif args.arch in ['Alexnet-ImageNet']:
+        elif args.arch in ['AlexNet_ImageNet']:
             decomposed_list = Decompose(args.arch, pretrained_model, args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
             model = weight_init(model, decomposed_list, args.target)
 
