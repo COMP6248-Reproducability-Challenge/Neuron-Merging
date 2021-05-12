@@ -188,7 +188,7 @@ def assign_weights(old_obj, new_obj):
 def neuron_merge(model,
                  input_size,
                  pruning_ratio = 0.5,
-                 threshold=0.9,
+                 threshold=0.45,
                  epochs = 100,
                  max_acc = 5e-3,
                  pruning_criterion='l1-norm',
@@ -224,9 +224,7 @@ def neuron_merge(model,
             assign_weights(layers[0]["object"], merged_layers[0])
             assign_weights(layers[-1]["object"], merged_layers[-1])
         else:
-             if isinstance(layers[0]["object"], nn.Linear): 
-                    
-
+             if isinstance(layers[0]["object"], nn.Linear):
                         
                     weight = layers[0]["object"].weight.cpu().detach().numpy()
                     bias = layers[0]["object"].bias.cpu().detach().numpy()
@@ -243,11 +241,11 @@ def neuron_merge(model,
 
                     # pruned
                     layers[0]["object"].weight.data = layers[0]["object"].weight[output_channel_index,:]
+                    layers[0]["object"].bias.data = layers[0]["object"].bias.data[output_channel_index]
                     layers[0]["object"].in_features = layers[0]["object"].weight.data.shape[0]
                     layers[0]["object"].out_features = layers[0]["object"].weight.data.shape[-1]
                     
                     # update next input channel
-                    input_channel_index = output_channel_index                    
                     layers[-1]["object"].weight.data = layers[-1]["object"].weight @ z
                     layers[-1]["object"].in_features = layers[-1]["object"].weight.data.shape[0]
                     layers[-1]["object"].out_features = layers[-1]["object"].weight.data.shape[-1]

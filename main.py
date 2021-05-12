@@ -169,7 +169,7 @@ if __name__=='__main__':
             help='SGD momentum (default: 0.9)')
     parser.add_argument('--weight-decay', '--wd', default=5e-4, type=float,
             metavar='W', help='weight decay (default: 5e-4)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
+    parser.add_argument('--no-cuda', action='store_true', default=True,
             help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
             help='random seed (default: 1)')
@@ -355,13 +355,13 @@ if __name__=='__main__':
 
     # weight initialization
     if args.retrain:
-        '''
-        decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
-        model = weight_init(model, decomposed_list, args.target)
-        '''
+        # decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
+        # model = weight_init(model, decomposed_list, args.target)
+
         # Reprod
-        import neuron_merge
-        cfg = [300,100]    
+        sys.path.append('./reimplement')
+        from nmerge import neuron_merge
+        cfg = [300,100]
         orig_model = models.LeNet_300_100(bias_flag=True, cfg=cfg)
         input_shape = [784]
         model = neuron_merge(orig_model, input_shape, threshold=0.5)
