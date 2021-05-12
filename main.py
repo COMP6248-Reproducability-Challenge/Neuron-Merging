@@ -355,8 +355,16 @@ if __name__=='__main__':
 
     # weight initialization
     if args.retrain:
+        '''
         decomposed_list = Decompose(args.arch, pretrained_model['state_dict'], args.criterion, args.threshold, args.lamda, args.model_type, temp_cfg, args.cuda).main()
         model = weight_init(model, decomposed_list, args.target)
+        '''
+        # Reprod
+        import neuron_merge
+        cfg = [300,100]    
+        orig_model = models.LeNet_300_100(bias_flag=True, cfg=cfg)
+        input_shape = [784]
+        model = neuron_merge(orig_model, input_shape, threshold=0.5)
 
 
     # print the number of model parameters

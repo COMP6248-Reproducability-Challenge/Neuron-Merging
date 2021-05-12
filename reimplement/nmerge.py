@@ -7,6 +7,11 @@ import torch.nn as nn
 from collections import OrderedDict
 import copy
 from sklearn.metrics import pairwise_distances
+import sys
+sys.path.append('..')
+from decompose import create_scaling_mat_ip_thres_bias
+from decompose import create_scaling_mat_conv_thres_bn
+import numpy as np
 
 def model_architecture(model,
                        input_size,
@@ -15,7 +20,7 @@ def model_architecture(model,
                        dtypes=None):
 
     if dtypes == None:
-        dtypes = [torch.FloatTensor]*len(input_size)
+        dtypes = [torch.FloatTensor for val in input_size]
 
     def register_hook(module):
         def hook(module, input, output):
@@ -50,12 +55,17 @@ def model_architecture(model,
             hooks.append(module.register_forward_hook(hook))
 
     # multiple inputs to the network
+    """
     if isinstance(input_size, tuple):
         input_size = [input_size]
+    """
 
     # batch_size of 2 for batchnorm
+    """
     x = [torch.rand(2, *in_size).type(dtype).to(device=device)
          for in_size, dtype in zip(input_size, dtypes)]
+    """
+    x = [torch.randn((1, *input_size))]
 
     # apply hooks
     summary = OrderedDict()
@@ -71,6 +81,42 @@ def model_architecture(model,
 
     return summary
 
+def get_output_channel_index(value, pruning_ratio=0, criterion='l1-norm'):
+
+        output_channel_index = []
+
+        if len(value.size()) :
+
+            weight_vec = value.view(value.size()[0], -1)
+
+            # l1-norm
+            if criterion == 'l1-norm':
+                norm = torch.norm(weight_vec, 1, 1)
+                norm_np = norm.cpu().detach().numpy()
+                arg_max = np.argsort(norm_np) 
+                arg_max_rev = arg_max[::-1][:int((1-pruning_ratio)*len(arg_max))] # self.cfg[layer_id] is the number of filters kept for a given layer [300, 100] if pruning_ratio = 0.5 -> cfg = [150, 50] arg_max = [5,4,3]
+                output_channel_index = sorted(arg_max_rev.tolist())
+            
+            # l2-norm
+            elif criterion == 'l2-norm':
+                norm = torch.norm(weight_vec, 2, 1)
+                norm_np = norm.cpu().detach().numpy()
+                arg_max = np.argsort(norm_np)
+                arg_max_rev = arg_max[::-1][:int((1-pruning_ratio)*len(arg_max))]
+                output_channel_index = sorted(arg_max_rev.tolist())
+
+            # l2-GM
+            """
+            elif criterion == 'l2-GM':
+                weight_vec = weight_vec.cpu().detach().numpy()
+                matrix = distance.cdist(weight_vec, weight_vec, 'euclidean')
+                similar_sum = np.sum(np.abs(matrix), axis=0)
+
+                output_channel_index = np.argpartition(similar_sum, -self.cfg[layer_id])[-self.cfg[layer_id]:]
+            """
+
+        return output_channel_index
+    
 def pruning_mask(weight, threshold = 0.9):
     cosine_dist = pairwise_distances(weight.flatten(1), metric="cosine")
     sim = torch.from_numpy(1-cosine_dist).abs() > threshold
@@ -141,14 +187,18 @@ def assign_weights(old_obj, new_obj):
     
 def neuron_merge(model,
                  input_size,
+                 pruning_ratio = 0.5,
                  threshold=0.9,
                  epochs = 100,
-                 max_acc = 5e-3):
+                 max_acc = 5e-3,
+                 pruning_criterion='l1-norm',
+                 model_type = "merge", #original, prune, or merge
+                 dif_method = False):
     new_model = copy.deepcopy(model)
     arch = list(model_architecture(new_model, input_size).items())[:-1]
     trainable = [ind for ind, val in enumerate(arch) 
                  if isinstance(val[1]["object"],  (nn.Linear, nn.Conv2d))]
-    
+                 
     supported = (nn.Linear,
                  nn.Conv2d,
                  nn.MaxPool2d,
@@ -157,26 +207,49 @@ def neuron_merge(model,
                  nn.Identity)
     check_type = lambda val: isinstance(val["object"], supported)
     check_dropout = lambda val: not isinstance(val["object"], nn.Dropout)
-    i=0
+
     for start, end in zip(trainable[:-1], trainable[1:]):
-        i+=1
-        print(i)
-        print(start)
-        print(end)
-        print(new_model)
         #get layers, and check if supported
         layers = list(filter(check_dropout, list(zip(*arch))[1][start:end+1]))
         if not all(map(check_type, layers)):
             continue
         
         #find merged values
-        merged_layers = merge_on_layers(layers,
-                                        threshold=threshold,
-                                        epochs = epochs,
-                                        max_acc = max_acc)
-        #assign values to model
-        assign_weights(layers[0]["object"], merged_layers[0])
-        assign_weights(layers[-1]["object"], merged_layers[-1])
-    
-    print("end")
+        if dif_method:
+            merged_layers = merge_on_layers(layers,
+                                            threshold=threshold,
+                                            epochs = epochs,
+                                            max_acc = max_acc)
+            #assign values to model
+            assign_weights(layers[0]["object"], merged_layers[0])
+            assign_weights(layers[-1]["object"], merged_layers[-1])
+        else:
+             if isinstance(layers[0]["object"], nn.Linear): 
+                    
+
+                        
+                    weight = layers[0]["object"].weight.cpu().detach().numpy()
+                    bias = layers[0]["object"].bias.cpu().detach().numpy()
+
+
+                    bias_reshaped = bias.reshape(bias.shape[0],-1)
+                    concat_weight = np.concatenate([weight, bias_reshaped], axis = 1)
+                    
+                    output_channel_index = get_output_channel_index(torch.from_numpy(concat_weight), pruning_ratio=pruning_ratio, criterion=pruning_criterion)
+
+                    # make scale matrix with bias
+                    x = create_scaling_mat_ip_thres_bias(concat_weight, np.array(output_channel_index), threshold, model_type) # merge, prune
+                    z = torch.from_numpy(x).type(dtype=torch.float)
+
+                    # pruned
+                    layers[0]["object"].weight.data = layers[0]["object"].weight[output_channel_index,:]
+                    layers[0]["object"].in_features = layers[0]["object"].weight.data.shape[0]
+                    layers[0]["object"].out_features = layers[0]["object"].weight.data.shape[-1]
+                    
+                    # update next input channel
+                    input_channel_index = output_channel_index                    
+                    layers[-1]["object"].weight.data = layers[-1]["object"].weight @ z
+                    layers[-1]["object"].in_features = layers[-1]["object"].weight.data.shape[0]
+                    layers[-1]["object"].out_features = layers[-1]["object"].weight.data.shape[-1]
+
     return new_model
