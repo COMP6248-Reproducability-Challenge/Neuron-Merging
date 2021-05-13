@@ -10,14 +10,20 @@ This repository contains the original code of the authors and our reimplementati
 ## Our contributions
 On branch `main`:
 1. Model agnostic implementation
+
 `/reimplement/nmerge.py` is an attempt to create a model agnostic implementation for neuron merging. To implement the original code to a new model, its exact architecture must be known and the user has to understand how to desctructure the weights before the merging algorithm can be called. This makes it quite difficult to use the merging algorithm on new models which limits its reproducability. The `nmerge.py` function accepts any model based on `torch.nn.Module` and attempts to determine which layers can be pruned (Conv2D followed by ReLU, Linear followed by ReLU).
 
 On branch `reprod-algo`:
 2. Addition of AlexNet
+
 We implemented and tested the merging algorithm on two versions of AlexNet: one trained on the CIFAR100 dataset and one on the ImageNet dataset. We wrote supporting scripts to train/download these models which are `scripts/create_AlexNet_CIFAR100.py` and `scripts/create_AlexNet_ImageNet.py`. The models are defined in `models/Alexnet_CIFAR100.py` and `models/Alexnet_ImageNet.py`. We modified `decompose.py` and `decompose_re.py` to support the AlexNet architecture. Finally, we wrote two scripts `scripts/AlexNet_CIFAR100.sh` and `scripts/AlexNet_ImageNet.sh` which follow the conventions of the original code, therefore AlexNet can be tested in the same way as the original models (e.g. VGG16). We added these modifications to the original README.md, so that other people can reproduce our results.
+
 3. Re-implementing algorithms 1-3
+
 `decompose_re.py` contains the re-implementations of algorithms 1-3 as described in the paper. The file builds on the class `Decompose` from the original `decompose.py`. The re-implemented functions are `alg1_FC` and `alg2` for fully-connected layers and `alg1_conv` and `alg3` for convolutional layers. In terms of output the first pair of functions maps to `create_scaling_mat_ip_thres_bias` and the second pair maps to `create_scaling_mat_conv_thres_bn` of `decompose.py`. The variable names of the re-implemented functions match those used in the paper.
+
 4. Adding an implementation argument to the scripts
+
 We added a new argument -i for all of the models which enables the user to select between the original code ('original') and our re-implementation ('reimplementation'). By default this argument is 'original'. We modified the original README to add these changes so that they are reproducible.
 
 # Modified README: Neuron Merging: Compensating for Pruned Neurons
