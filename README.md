@@ -1,6 +1,8 @@
 # COMP6248 Reproducability Challenge - Team 2
 This repository contains the original code of the authors and our reimplementations/extensions. We have chosen a paper by Kim et al. submitted to the 2020 NeurIPS conference with the title **Neuron Merging: Compensating for Pruned Neurons**. The paper can be accessed at https://papers.nips.cc/paper/2020/hash/0678ca2eae02d542cc931e81b74de122-Abstract.html.
 
+`Reproducibility_Challenge.pdf` contains our final report.
+
 ## Team members
 - Bence Cserkuti (bc1u17@soton.ac.uk)
 - Olaf Lipinski (o.lipinski@soton.ac.uk)
@@ -22,7 +24,7 @@ We implemented and tested the merging algorithm on two versions of AlexNet: one 
 
 #### 4. Adding an implementation argument to the scripts (on branch `reprod-algo`)
 
-We added a new argument -i for all of the models which enables the user to select between the original code ('original') and our re-implementation ('reimplementation'). By default this argument is 'original'. We modified the original README to add these changes so that they are reproducible.
+We added a new argument `-i` for all of the models which enables the user to select between the original code ('original') and our re-implementation ('reimplementation'). By default this argument is 'original'. We modified the original README to add these changes so that they are reproducible.
 
 # Modified README: Neuron Merging: Compensating for Pruned Neurons
 
